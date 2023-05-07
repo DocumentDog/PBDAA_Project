@@ -1,0 +1,1 @@
+crime sourse data was 1g big, so we only inlcude the 1000 line version in clean folder. you can find the orginal verion in readme on first directory
