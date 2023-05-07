@@ -1,0 +1,61 @@
+profiling bike with scala:
+1:put all data on hdfs, then run following codes.
+
+
+spark-shell --deploy-mode client -i  FILENAME.scala
+
+val input = sc.textFile("clean_data.txt")
+val m = input.map(_.split(","))
+//split input.txt
+
+
+import org.apache.spark.sql.SQLContext
+import org.apache.spark.sql.Row
+import org.apache.spark.sql.types._
+
+// Initialize the SQLContext
+val sqlContext = new SQLContext(sc)
+//make them double
+val rowRDD = m.map(arr => (arr(0).toDouble, arr(1).toDouble))
+val schema = StructType(
+  List(
+    StructField("Latitude", DoubleType, nullable = true),
+    StructField("Longitude", DoubleType, nullable = true)
+  )
+)
+
+
+import sqlContext.implicits._
+val df = rowRDD.toDF("Latitude", "Longitude")
+//make data frame
+
+//for each coordinate, find their distance, put the one in raduis in map, then count
+val counts = df.collect().map(row => {
+  val coord = (row.getDouble(0), row.getDouble(1))//tempoary variable of struct<double, double>
+  val count = df.rdd.filter(otherRow => {
+    val otherCoord = (otherRow.getDouble(0), otherRow.getDouble(1))
+    val distance = math.sqrt(math.pow(coord._1 - otherCoord._1, 2) + math.pow(coord._2 - otherCoord._2, 2))
+    distance <= 0.025
+  }).count()
+  (coord, count)
+})
+
+val countsRDD = sc.parallelize(counts)
+//make new dataframe that combined coordinates with count
+val countsDF = countsRDD.toDF("Coordinate", "Count")
+
+val average = countsDF.agg(avg("Count")).collect()(0).getDouble(0)
+val median = countsDF.stat.approxQuantile("Count", Array(0.5), 0.01)(0)
+
+countsDF.show()
+println(s"Average count: $average")
+println(s"Median count: $median")
+
+//previously try to store with coordiante, which failed because coordinate is struct<double,double>, make new dataframe
+//val countsDF2 = countsDF.withColumn("Latitude", $"Coordinate._1").withColumn("Longitude", $"Coordinate._2").drop("Coordinate")
+//below are sort by count version， i forgot to take a screen shot, please do not deduct points for this. 
+val countsDF2 = countsDF.withColumn("Latitude", $"Coordinate._1").withColumn("Longitude", $"Coordinate._2").drop("Coordinate").sort($"Count")
+//combined the dataframe into 1 rdd to be saved on hdfs , 2 version
+countsDF2.coalesce(1).write.format("csv").option("header", "true").save("count.csv")
+//countsDF2.coalesce(1).write.format("csv").option("header", "true").save("sortbycount.csv")
+

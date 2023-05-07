@@ -1,0 +1,44 @@
+spark-shell --deploy-mode client
+
+//read file into dataframe
+val df = spark.read.format("csv").option("header", "true").option("inferSchema", "true").load("bussortbylatitude.csv")
+df.show()
+//drop column
+val afterdrop = df.drop("/n")
+afterdrop.show()
+// sorted
+val sorted = afterdrop.sort(desc("Latitude")).sort(desc("Longitude"))
+sorted.show()
+
+// mean
+sorted.agg(avg("Latitude") as "mean latitude", avg("Longitude") as "mean longitude").show()
+
+//median
+val  laMedian = sorted.stat.approxQuantile("Latitude", Array(0.5), 0)(0)
+println("Latitude Median: "+laMedian)
+val  loMedian = sorted.stat.approxQuantile("Longitude", Array(0.5), 0)(0)
+println("Longitude Median: "+loMedian)
+
+ //distinct all columns
+ val distinctDF = sorted.distinct()
+ println("Distinct count: "+sorted.count())
+ distinctDF.show(false)
+
+//for each coordinate, find their distance, put the one in raduis in map, then count
+val counts = df.collect().map(row => {
+  val coord = (row.getDouble(0), row.getDouble(1))//tempoary variable of struct<double, double>
+  val count = df.rdd.filter(otherRow => {
+    val otherCoord = (otherRow.getDouble(0), otherRow.getDouble(1))
+    val distance = math.sqrt(math.pow(coord._1 - otherCoord._1, 2) + math.pow(coord._2 - otherCoord._2, 2))
+    distance <= 0.025
+  }).count()
+  (coord._1, coord._2, count)
+})
+
+val countsRDD = sc.parallelize(counts)
+//make new dataframe that combined coordinates with count
+val countsDF = countsRDD.toDF("Latitude", "Longitude", "Number of nearby Stops")
+countsDF.show()
+
+//write out
+countsDF.coalesce(1).write.csv("hw8.csv")

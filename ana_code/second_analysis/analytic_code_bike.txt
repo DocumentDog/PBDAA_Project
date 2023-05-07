@@ -1,0 +1,35 @@
+hdfs dfs -put bike_crime_ratio.csv
+
+spark-shell --deploy-mode client
+
+import org.apache.spark.ml.Pipeline
+
+import org.apache.spark.ml.feature.VectorAssembler
+
+import org.apache.spark.ml.regression.{LinearRegression, LinearRegressionModel}
+
+val crimeRDD = sc.textFile("bike_crime_ratio.csv")
+
+val header = crimeRDD.first()
+
+val NoHeader = crimeRDD.filter(line => !line.equals(header))
+
+val crime_bike_RDD = NoHeader.map{x => x.split(',')}.map{x => (x(0).toDouble, x(1).toDouble)}
+
+val crimeDF = crime_bike_RDD.toDF("crime", "bike")
+
+val features = new VectorAssembler().setInputCols(Array("bike")).setOutputCol("features")
+
+val lr = new LinearRegression().setLabelCol("crime")
+
+val pipeline = Pipeline().setStages(Array(features, lr))
+
+val model = pipeline.fit(crimeDF)
+
+val linRegModel = model.stages(1).asInstanceOf[LinearRegressionModel]
+
+println(s"RMSE:  ${linRegModel.summary.rootMeanSquaredError}")
+
+println(s"r2:    ${linRegModel.summary.r2}")
+
+println(s"Model: Y = ${linRegModel.coefficients(0)} * X + ${linRegModel.intercept}")

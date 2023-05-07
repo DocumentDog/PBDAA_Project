@@ -1,0 +1,63 @@
+
+spark-shell --deploy-mode client
+
+// Initialize the SQLContext
+import org.apache.spark.sql.SQLContext
+import org.apache.spark.sql.Row
+import org.apache.spark.sql.types._
+
+//read bus into dataframe
+val bus = spark.read.format("csv").option("header", "true").option("inferSchema", "true").load("bussortbylatitude.csv")
+bus.show()
+
+// Read crime.csv
+val input_crime = sc.textFile("crime.csv")
+val m_crime = input_crime.map(line => {
+  val arr = line.split(",") 
+  val lat = arr(0).toDouble
+  val lon = arr(1).replaceAll("\"", "").trim.toDouble
+  (lat, lon)
+})
+// Create RDD for crime coordinates
+val rowRDD_crime = m_crime.map(arr => (arr._1, arr._2))
+val schema_crime = StructType(
+  List(
+    StructField("Latitude", DoubleType, nullable = true),
+    StructField("Longitude", DoubleType, nullable = true)
+  )
+)
+
+import sqlContext.implicits._
+val crime = rowRDD_crime.toDF("Latitude", "Longitude")
+crime.show()
+
+
+//drop column
+val afterdrop = bus.drop("/n")
+afterdrop.show()
+
+// sorted
+val sorted = afterdrop.sort(col("Latitude").asc,col("Longitude").asc)
+sorted.show()
+
+// mean
+sorted.agg(avg("Latitude") as "mean latitude", avg("Longitude") as "mean longitude").show()
+
+//median
+val  laMedian = sorted.stat.approxQuantile("Latitude", Array(0.5), 0)(0)
+println("Latitude Median: "+laMedian)
+val  loMedian = sorted.stat.approxQuantile("Longitude", Array(0.5), 0)(0)
+println("Longitude Median: "+loMedian)
+
+
+
+//for each coordinate, find their distance, put the one in raduis in map, then count
+val counts = sorted.collect().map(row => {
+    val coord = (row.getDouble(0), row.getDouble(1))//tempoary variable of struct<double, double>
+    val count = sorted.rdd.filter(otherRow => {
+        val otherCoord = (otherRow.getDouble(0), otherRow.getDouble(1))
+        val distance = math.sqrt(math.pow(coord._1 - otherCoord._1, 2) + math.pow(coord._2 - otherCoord._2, 2))
+        distance <= 0.0025
+    }).count()
+    val crimecount = crime.rdd.filter(otherRow => {
+        val otherCoord = (otherRow.getD
