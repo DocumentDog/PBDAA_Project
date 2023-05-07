@@ -1,0 +1,1 @@
+some commands are misssing please check jerry's readme as a reference, and write out the missing one. 

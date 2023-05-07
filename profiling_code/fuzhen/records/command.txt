@@ -1,0 +1,16 @@
+javac -classpath opencsv.jar:`yarn classpath` -d . CountRecsMapper.java
+javac -classpath `yarn classpath` -d . CountRecsReducer.java
+javac -classpath `yarn classpath`:. -d . CountRecs.java
+jar -cvf CountRecs.jar *.class
+
+hdfs dfs -rm -r -f hw
+hdfs dfs -rm -r -f output
+hdfs dfs -mkdir hw hdfs dfs -mkdir hw/input
+
+// input.csv OR cleaned.csv--> remember to change here
+hdfs dfs -put input.csv hw/input
+hadoop jar CountRecs.jar CountRecs hw/input/input.csv output
+
+
+//check result
+hdfs dfs -cat output/part-r-00000
