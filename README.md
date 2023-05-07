@@ -27,7 +27,7 @@ Lastly we use scala to find the trendline and visualize it with csv.
 
 In order of rerunning our project, you should follow the instructions:
 
-1: download source file from website above/or you can see them already downloaded in directory data_ingest/source_data 
+1: download source file from website above/or you can see them already downloaded in directory data_ingest/source_data\n 
 2:cleaning the sourcefile via mapreduce, the crime cvs should be shrunk down to the first 1000 line only.(check etl directory)
 3:using mapreduce to do the profiling counting the length of files before and after cleaning.(check profile code directory) after running mapreduce, using replace function of txt
 (clrt f)to remove the extra zero at the end if there are one.
