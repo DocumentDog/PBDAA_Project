@@ -1,0 +1,54 @@
+clean bike via mapreduce:
+0: upload 2021.csv onto local server with upload button on top left, then upload it onto hdfs with hdfs dfs -put 2021.csv
+1:create vi compile/delete/upload.script, via
+vi xxx.sh
+2:upload all files ontn to data proc with upload button on right top, not with upload.sh
+3:run compile,upload scripts with chmod, upload jar onto hdfs. 
+run .sh with chmod +x xxxx.sh
+4:run mapreduce script: 
+hadoop jar Clean.jar Clean /user/hy2156_nyu_edu/2021.csv /user/hy2156_nyu_edu/hw7cl2
+5:see result with:
+hdfs dfs -cat hw7cl2/part-r-00000
+6:
+download to local with hdfs: hdfs dfs -get /user/hy2156_nyu_edu/....jar
+then download it onto machine, with download button.see adress in detial with "pwd" command. 
+
+below are examples:
+
+
+Compile.sh
+
+javac -classpath `yarn classpath` -d . CleanMapper.java
+
+javac -classpath `yarn classpath` -d . CleanReducer.java
+
+javac -classpath `yarn classpath`:. -d . Clean.java
+
+jar -cvf Clean.jar *.class
+
+
+remove.sh:
+rm CleanMapper.java
+rm CleanReducer.java
+rm Clean.java
+
+hdfs dfs -rm CleanMapper.java
+hdfs dfs -rm CleanReducer.java
+hdfs dfs -rm Clean.java
+
+upload to hdfs.sh:
+hdfs dfs -put CleanMapper.java
+hdfs dfs -put CleanReducer.java
+hdfs dfs -put Clean.java
+
+hdfs dfs -put 2021.csv
+hdfs dfs -put clean_data.txt
+
+
+
+run command:
+hadoop jar Clean.jar Clean /user/hy2156_nyu_edu/2021.csv/user/hy2156_nyu_edu/hw7cl1
+
+
+see output:
+hdfs dfs -cat hw7cl1/part-r-00000

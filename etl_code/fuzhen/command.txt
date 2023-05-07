@@ -1,0 +1,5 @@
+# run the jar file
+hadoop jar Clean.jar Clean hw/input/bus.csv output
+
+# check result
+hdfs dfs -cat output/part-r-00000
